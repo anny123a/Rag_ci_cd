@@ -78,16 +78,6 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
@@ -97,11 +87,15 @@ jobs:
 
       - name: Stop and Remove Old Container
         run: |
-          docker ps -q --filter "name=rag-app" | grep -q . && docker stop rag-app && docker rm -fv rag-app || true
+          docker stop rag-app || true
+          docker rm rag-app || true
 
       - name: Run New Container
         run: |
           docker run -d -p 8080:8501 \
           --name rag-app \
           -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
-          ${{ secrets.DOCKER_USERNAME }}/rag-chatbot3:latest
+          ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest
+
+      - name: Cleanup
+        run: docker system prune -f
