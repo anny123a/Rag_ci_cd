@@ -1,0 +1,22 @@
+deploy:
+  name: Deploy to EC2
+  needs: build
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: SSH into EC2 and deploy
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/rag-chatbot3:latest
+          
+          docker stop rag-container || true
+          docker rm rag-container || true
+          
+          docker run -d -p 8501:8501 \
+          --name rag-container \
+          -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+          ${{ secrets.DOCKER_USERNAME }}/rag-chatbot3:latest
